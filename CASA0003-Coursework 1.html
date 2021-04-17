@@ -1,0 +1,302 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title> 20051170：Coursework 1 </title>
+
+<meta name="viewport" content="initial-scale=1.0, user-scalable=no" />
+<script charset="utf-8" src="https://d3js.org/d3.v4.min.js"></script>
+<script charset="utf-8" src="https://cdnjs.cloudflare.com/ajax/libs/dimple/2.3.0/dimple.latest.min.js"></script> 
+    
+    
+<style>
+      .node circle {
+        stroke: #3a403d;
+        stroke-width: .5px;
+      }
+
+        .node circle:hover{
+          stroke-width: 3px !important;
+          opacity: 1 !important;
+        }
+        
+        
+        #header {
+            margin: auto;
+            width: 50%;
+        }
+        
+        #chartContainer {width: 840px; margin: auto; margin-top: 100px; }
+    
+        #chartContainer p {margin-left: 60px; margin-bottom: 5px; margin-top: 0; padding: 0;}
+    
+        #charttitle {font: bold 22px  Comic Sans MS, Comic Sans, cursive;}
+        
+        h1 {
+            margin: auto;
+            padding: 50px 0 0 0;
+            text-align: center;
+            font: bolder 35px Comic Sans MS, Comic Sans, cursive;
+        }
+        
+        h2 {
+            margin: auto;
+            padding: 10px 0 0 0;
+            font: bold 25px Comic Sans MS, Comic Sans, cursive;
+        }
+        
+        
+        h3 {
+            margin: 5px 15px 10px 20px;
+            padding: 0;
+            font:  16px Verdana;
+        }
+       
+        h4 {
+            margin: 15px 15px 20px 20px;
+            padding: 0;
+            text-align: end;
+            font: normal 16px Verdana;
+        }
+
+        p {
+            margin: 15px 15px 20px 20px;
+            padding: 0;
+            
+        }
+
+</style>
+</head>
+  
+    
+<body>
+
+
+      
+<div id="header">
+    <h1>Countries’ GDP per capita (from 2011 to 2019)</h1>
+    <h4>Data collected from <a href="https://data.worldbank.org/indicator/NY.GDP.PCAP.CD">THE WORLD BANK </a>.</h4>     
+</div>
+
+       
+<h2>Part 1 - D3 Bubble Chart (GDP per head in 2019)</h2><h3>Based on template example by <a href="https://www.d3-graph-gallery.com/circularpacking.html">D3 Graph Gallery</a>.</h3>
+    
+      
+<div id="my_dataviz"></div>
+      
+    <script src="https://d3js.org/d3.v4.min.js"></script>
+    <script>
+    var width = window.innerWidth, height = window.innerHeight, sizeDivisor = 100, nodePadding = 2.5;
+
+    var svg = d3.select("#my_dataviz")
+        .append("svg")
+        .attr("width", width)
+        .attr("height", height);
+
+    var color = d3.scaleOrdinal(d3.schemeCategory20c);
+
+    var simulation = d3.forceSimulation()
+        .force("forceX", d3.forceX().strength(.1).x(width * .5))
+        .force("forceY", d3.forceY().strength(.1).y(height * .5))
+        .force("center", d3.forceCenter().x(width * .5).y(height * .5))
+        .force("charge", d3.forceManyBody().strength(-100));
+
+    d3.csv("GDP per capita.csv", types, function(error,graph){
+      if (error) throw error;
+
+      // sort the nodes so that the bigger ones are at the back
+      graph = graph.sort(function(a,b){ return b.size - a.size; });
+
+
+       // create a tooltip
+      var Tooltip = d3.select("#my_dataviz")
+        .append("div")
+        .style("opacity", 0)
+        .attr("class", "tooltip")
+        .style("background-color", "white")
+        .style("border", "solid")
+        .style("border-width", "2px")
+        .style("border-radius", "5px")
+        .style("padding", "5px")
+        .style("position", "absolute")
+      
+
+      var mouseover = function(d) { 
+        Tooltip
+          .style("opacity", 1)
+      }
+      
+      var mousemove = function(d) {
+        Tooltip
+          .html("<h3>" + d.CountryName + "</h3>" + "<p>" + d3.format(".1f")(d.YR2019/(0.3)) + " Thousand dollars" + "</p>")
+          .style("left", (d3.mouse(this)[0]+40) + "px")
+          .style("top", (d3.mouse(this)[1]+40) + "px")
+      }
+      
+      var mouseleave = function(d) {
+        Tooltip
+          .style("opacity", 0)
+      }       
+        
+        
+      simulation
+          .nodes(graph)
+          .force("collide", d3.forceCollide().strength(.5).radius(function(d){ return d.radius + nodePadding; }).iterations(1))
+          .on("tick", function(d){
+            node
+                .attr("cx", function(d){ return d.x; })
+                .attr("cy", function(d){ return d.y; })
+          });
+
+      var node = svg.append("g")
+          .attr("class", "node")
+        .selectAll("circle")
+        .data(graph)
+        .enter().append("circle")
+          .attr("r", function(d) { return d.radius; })
+          .attr("fill", function(d) { return color(d.CountryName); })
+          .attr("cx", function(d){ return d.x; })
+          .attr("cy", function(d){ return d.y; })
+          .on("mouseover", mouseover) 
+          .on("mousemove", mousemove)
+          .on("mouseleave", mouseleave)
+          .call(d3.drag()
+              .on("start", dragstarted)
+              .on("drag", dragged)
+              .on("end", dragended));
+
+    });
+    
+
+
+
+    function dragstarted(d) {
+      if (!d3.event.active) simulation.alphaTarget(.03).restart();
+      d.fx = d.x;
+      d.fy = d.y;
+    }
+
+    function dragged(d) {
+      d.fx = d3.event.x;
+      d.fy = d3.event.y;
+    }
+
+    function dragended(d) {
+      if (!d3.event.active) simulation.alphaTarget(.03);
+      d.fx = null;
+      d.fy = null;
+    }
+
+    function types(d){
+      d.YR2019 = +d.YR2019*(0.3);
+      d.size = +d.YR2019*2;
+      d.radius = d.size;
+      return d;
+    }
+    </script>
+
+
+    
+<h2>Part 2 - Dimple Line Chart (GDP per head from 2011 to 2019)</h2><h3>Based on template example by <a href="http://dimplejs.org/examples_viewer.html?id=lines_horizontal"> JavaScript Charting Library</a>.</h3>
+
+
+<div id="chartContainer">
+      
+    <p id="charttitle">Chart title is here</p>
+    <p id="chartsubhead">GDP per capita between 2011 and 2019</p>
+    
+   <p><select id="CountryMenu"><option>Change Country Here:</option></select></p>  
+
+</div>
+
+    
+
+
+<script>
+
+
+      d3.csv("GDP per capita.csv", function(CountryData) {
+           
+        var chartdata;
+         
+          
+        var CountryMenu = document.getElementById("CountryMenu"); 
+     
+        for(var i = 0; i < CountryData.length; i++) { 
+            var el = document.createElement("option");
+            el.textContent = CountryData[i].CountryName;
+            el.value = CountryData[i].Index;
+            CountryMenu.appendChild(el);
+            }       
+        
+        function SetCountryData(index) {  
+                console.log(CountryData[index]); 
+
+                document.getElementById("charttitle").innerHTML = CountryData[index].CountryName; 
+
+                chartdata = [
+                  { "Country":"Hist","Year":"2011","GDP per capital *(1000$)":(CountryData[index].YR2011) },
+                  { "Country":"Hist","Year":"2012","GDP per capital *(1000$)":(CountryData[index].YR2012) },
+                  { "Country":"Hist","Year":"2013","GDP per capital *(1000$)":(CountryData[index].YR2013) },
+                  { "Country":"Hist","Year":"2014","GDP per capital *(1000$)":(CountryData[index].YR2014) },
+                  { "Country":"Hist","Year":"2015","GDP per capital *(1000$)":(CountryData[index].YR2015) },
+                  { "Country":"Hist","Year":"2016","GDP per capital *(1000$)":(CountryData[index].YR2016) },
+                  { "Country":"Hist","Year":"2017","GDP per capital *(1000$)":(CountryData[index].YR2017) },
+                  { "Country":"Hist","Year":"2018","GDP per capital *(1000$)":(CountryData[index].YR2018) },
+                  { "Country":"Hist","Year":"2019","GDP per capital *(1000$)":(CountryData[index].YR2019) }
+                ];
+
+        }
+        
+        SetCountryData(0);
+        
+        
+        var svg = dimple.newSvg("#chartContainer", 840, 440); 
+            
+        var myChart = new dimple.chart(svg, chartdata);  
+        myChart.setBounds(60, 15, 700, 300);            
+
+        myChart.defaultColors = [
+            new dimple.color("#e35473"),
+            new dimple.color("#e35473")
+        ];
+
+
+        var x = myChart.addCategoryAxis("x", "Year"); 
+        x.timeInterval = 10;  
+
+        var y = myChart.addMeasureAxis("y", "GDP per capital *(1000$)"); 
+        y.ticks = 6;
+
+        var s = myChart.addSeries("Country", dimple.plot.line);
+        s.lineMarkers = true;
+        s.lineWeight = 5;  
+        s.interpolation = "cardinal";
+        
+        
+
+        myChart.draw(500); 
+
+
+        svg.selectAll("path.domain").style("stroke", "#0f0f0f");
+        svg.selectAll("g.tick line").style("stroke", "#CCC");
+
+
+        document.getElementById("CountryMenu").onchange = function() {   
+           var x = document.getElementById("CountryMenu").value;
+           console.log(x);
+           SetCountryData(x);   
+            
+           svg.selectAll(".dimple-marker,.dimple-marker-back").remove(); 
+            
+           myChart.data = chartdata; 
+           myChart.draw(500);
+         }          
+          
+          
+          
+      });
+
+
+</script>
+  </body>
+</html>
